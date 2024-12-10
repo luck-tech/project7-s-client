@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
+import { QRCodeSVG } from "qrcode.react";
 
 interface Data {
   id: string;
@@ -12,129 +13,123 @@ interface Data {
 }
 
 export default function Home() {
-  const [code, setCode] = useState<string>(""); // 入力を一つの文字列で管理
+  const [code, setCode] = useState<string>("");
   const [textareaValue, setTextareaValue] = useState("");
-  const [isConfirmed, setIsConfirmed] = useState(false);
-  const [isCodeEntered, setIsCodeEntered] = useState(false);
-  const [data, setData] = useState<Data | null>(null); // レスポンスデータを保存するステート
-  const [query, setQuery] = useState<string | null>(null);
+  const [hasConfirmed, setHasConfirmed] = useState(false);
+  const [hasCodeEntered, setHasCodeEntered] = useState(false);
+  const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState<boolean>(false);
-  const [isCoppied, setIsCoppied] = useState(false);
-  const [isComposing, setIsComposing] = useState<boolean>(false); // IME合成中かどうかの状態
+  const [query, setQuery] = useState<string | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
+  const [isComposing, setIsComposing] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // クエリパラメータの取得
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      setQuery(params.get("id"));
-    }
+    const params = new URLSearchParams(window.location.search);
+    setQuery(params.get("id"));
   }, []);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (code.length > 0 && !isComposing) {
-      handleCodePost(); // 入力がある場合にリクエストを送る
+      handleCodePost();
     } else {
       setError(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code, isComposing]);
 
   // コピーボタンの機能実装
   const handleCopy = () => {
     navigator.clipboard.writeText(textareaValue).then(() => {
-      setIsCoppied(true);
-      setTimeout(() => {
-        setIsCoppied(false);
-      }, 1000); // 1秒後に元に戻る
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 1000);
     });
   };
 
   // 確認ボタン押下でPOSTリクエストを送信
   const handleConfirm = async () => {
+    if (!textareaValue || isLoading) return;
+    setIsLoading(true);
     try {
       const response = await axios.post(
         "https://katsushika-project.net/memos/create/",
-        {
-          memo: textareaValue,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+        { memo: textareaValue },
+        { headers: { "Content-Type": "application/json" } }
       );
-      console.log(response.data.id);
 
       if (response.status === 201) {
-        const responseData = response.data;
-        setData(responseData); // レスポンスデータを保存
+        setData(response.data);
+        setHasConfirmed(true);
       } else {
         console.error("失敗:", response.statusText);
       }
-    } catch (error) {
-      console.error("エラー:", error);
+    } catch (err) {
+      console.error("エラー:", err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // passkeyのPOSTリクエストを送信
   const handleCodePost = async () => {
+    if (!code || isLoading) return;
+    setIsLoading(true);
     try {
-      if (!query) {
-        const response = await axios.post(
-          "https://katsushika-project.net/memos/",
-          {
-            passkey: code,
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-        if (response.status === 200) {
-          const responseData = response.data;
-          setTextareaValue(responseData.memo);
-          setIsCodeEntered(true);
-          setError(false);
-        } else {
-          setError(true);
-          setIsCodeEntered(false);
-        }
-      }
-    } catch (error) {
-      console.error("エラー:", error);
-      setError(true);
-      setIsCodeEntered(false);
-    }
-  };
-
-  // QRのPOSTリクエストを送信
-  const handleQueryPost = async () => {
-    try {
-      const response = await axios.get(
-        `https://katsushika-project.net/memos/${query}`
+      const response = await axios.post(
+        "https://katsushika-project.net/memos/",
+        { passkey: code },
+        { headers: { "Content-Type": "application/json" } }
       );
 
       if (response.status === 200) {
         const responseData = response.data;
         setTextareaValue(responseData.memo);
-        const passkeyArray = responseData.passkey;
-        setCode(passkeyArray);
-        setIsCodeEntered(true);
+        setHasCodeEntered(true);
+        setError(false);
       } else {
-        console.error("失敗:", response.statusText);
+        setError(true);
+        setHasCodeEntered(false);
       }
-    } catch (error) {
-      console.error("エラー:", error);
+    } catch (err) {
+      console.error("エラー:", err);
+      setError(true);
+      setHasCodeEntered(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  //queryが存在する場合、リクエストを送る
+  // QRのGETリクエストを送信
+  const handleQueryPost = async () => {
+    if (!query || isLoading) return;
+    setIsLoading(true);
+    try {
+      const response = await axios.get(
+        `https://katsushika-project.net/memos/${query}`
+      );
+      if (response.status === 200) {
+        const responseData = response.data;
+        setTextareaValue(responseData.memo);
+        setCode(responseData.passkey);
+        setHasCodeEntered(true);
+      } else {
+        console.error("失敗:", response.statusText);
+      }
+    } catch (err) {
+      console.error("エラー:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // queryが存在する場合、リクエストを送る
   useEffect(() => {
     if (query) {
       handleQueryPost();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
   return (
@@ -159,10 +154,8 @@ export default function Home() {
           </p>
           <div className="p-5 rounded-lg bg-[#555] my-3 flex flex-col items-center">
             <p className="m-0">端末に表示されているコードを入力してください</p>
-            {error ? (
+            {error && (
               <p className="m-0 text-[#FF5B5B] text-sm">コードが違います。</p>
-            ) : (
-              ""
             )}
             <div className="flex mt-5 p-[6px_10px] w-auto lg:w-[280px] rounded-lg justify-center">
               <input
@@ -175,15 +168,11 @@ export default function Home() {
                 spellCheck="true"
                 ref={inputRef}
                 onCompositionStart={() => setIsComposing(true)}
-                onCompositionEnd={(
-                  e: React.CompositionEvent<HTMLInputElement>
-                ) => {
+                onCompositionEnd={(e) => {
                   setIsComposing(false);
                   setCode(e.currentTarget.value);
                 }}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                  setCode(e.currentTarget.value);
-                }}
+                onChange={(e) => setCode(e.currentTarget.value)}
                 className="w-full h-[45px] text-lg border-none rounded-lg outline-none p-1 text-center text-black"
               />
             </div>
@@ -194,14 +183,12 @@ export default function Home() {
           </div>
         </div>
         <div className="flex flex-col gap-3">
-          {!isCodeEntered ? (
-            <>
-              <h3 className="text-[18px] m-0 pt-5 font-bold">
-                手順
-                <br />
-                ①コピペする内容を下の欄に入力する
-              </h3>
-            </>
+          {!hasCodeEntered ? (
+            <h3 className="text-[18px] m-0 pt-5 font-bold">
+              手順
+              <br />
+              ①コピペする内容を下の欄に入力する
+            </h3>
           ) : (
             <h3 className="m-0 pt-5">結果</h3>
           )}
@@ -213,57 +200,50 @@ export default function Home() {
           />
 
           <div className="flex items-center gap-2.5 justify-end flex-col lg:flex-row">
-            {!isCodeEntered ? (
+            {!hasCodeEntered ? (
               <>
                 <h3 className="m-0 font-bold text-[18px]">②確定ボタンを押す</h3>
                 <button
-                  onClick={
-                    textareaValue
-                      ? () => {
-                          setIsConfirmed(true);
-                          handleConfirm();
-                        }
-                      : undefined
-                  }
+                  onClick={handleConfirm}
+                  disabled={!textareaValue || isLoading}
                   className={`p-[9px_24px] text-[#ECECEC] text-[13px] rounded-lg font-bold ${
-                    isConfirmed
+                    hasConfirmed
                       ? "bg-[#C0C0C0]"
-                      : textareaValue
+                      : textareaValue && !isLoading
                       ? "bg-[#FF5B5B]"
                       : "bg-[#C0C0C0]"
                   }`}
                 >
-                  確定する
+                  {isLoading ? "送信中..." : "確定する"}
                 </button>
               </>
             ) : (
               <button
                 onClick={handleCopy}
                 className={`p-2.5 text-[#ECECEC] rounded-lg font-bold ${
-                  isCoppied ? "bg-[#4cd997]" : "bg-[#FF5B5B]"
+                  isCopied ? "bg-[#4cd997]" : "bg-[#FF5B5B]"
                 }`}
               >
-                {isCoppied ? "コピっと！" : "コピーする"}
+                {isCopied ? "コピっと！" : "コピーする"}
               </button>
             )}
           </div>
-          {isConfirmed && !isCodeEntered ? (
+          {hasConfirmed && !hasCodeEntered && (
             <div className="flex justify-end gap-2.5 items-center flex-col lg:flex-row">
               <p className="m-0 text-xs">QRコードを削除してやり直す</p>
               <button
                 onClick={() => {
                   setTextareaValue("");
-                  setIsConfirmed(false);
+                  setHasConfirmed(false);
                   setData(null);
                   setCode("");
+                  setError(false);
                 }}
-                className="p-1.5 text-[#FF5B5B] bg-[#333333] !border !border-[3px] border-[#FF5B5B] rounded-lg font-bold"
+                className="p-1.5 text-[#FF5B5B] bg-[#333333] !border-[3px] border-[#FF5B5B] rounded-lg font-bold"
               >
                 リセット
               </button>
             </div>
-          ) : (
-            ""
           )}
         </div>
       </div>
@@ -275,10 +255,12 @@ export default function Home() {
           コピペ内容を貼り付けるとQRコードが表示されます。
         </p>
         {data ? (
-          <img
-            src={data?.qr_img}
-            className="bg-white/60 rounded-lg my-5 aspect-[1/1] h-[280px] lg:h-[200px]"
-          />
+          <div className="bg-white/60 rounded-lg my-5 aspect-[1/1] h-[280px] lg:h-[200px]">
+            <QRCodeSVG
+              value={`https://www.copitto.com/?id=${data.id}`}
+              className="w-full h-full p-6 bg-white/60"
+            />
+          </div>
         ) : (
           <div className="bg-white/45 rounded-lg my-5 aspect-[1/1] h-[280px] lg:h-[300px] min-h-[170px]" />
         )}
@@ -290,10 +272,8 @@ export default function Home() {
         <div className="flex flex-col items-center">
           <p className="my-8 whitespace-nowrap">次のコードを入力してください</p>
           <p
-            className={`text-${
-              data ? "gray-900" : "gray-400"
-            } text-[#7D7D7D] bg-white justify-center items-center h-[51px] flex rounded-lg font-bold w-full text-${
-              data ? "2xl" : "xs"
+            className={`text-[#7D7D7D] bg-white justify-center items-center h-[51px] flex rounded-lg font-bold w-full ${
+              data ? "text-2xl" : "text-xs"
             } px-4`}
           >
             {data ? data.passkey : "コピペ内容を貼り付けると表示されます"}
