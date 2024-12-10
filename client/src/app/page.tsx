@@ -258,7 +258,8 @@ export default function Home() {
           <div className="bg-white/60 rounded-lg my-5 aspect-[1/1] h-[280px] lg:h-[200px]">
             <QRCodeSVG
               value={`https://www.copitto.com/?id=${data.id}`}
-              className="w-full h-full p-6 bg-white/60"
+              className="w-full h-full p-6 bg-white/60 rounded-lg"
+              bgColor="bg-white/60"
             />
           </div>
         ) : (
