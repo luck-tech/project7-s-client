@@ -30,6 +30,7 @@ export default function Home() {
   }, []);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (code.length > 0 && !isComposing) {
@@ -132,13 +133,25 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // 高さをリセットしてからスクロール高さを取得
+      textarea.style.height = "auto";
+      // 最大高さ（約4行分）に制限
+      const maxHeight = 104; // Tailwindのmax-h-[104px]と一致
+      textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+    }
+  }, [textareaValue]);
+
   return (
-    <div className="flex flex-col lg:flex-row p-8 lg:p-[82px_79px] h-auto lg:h-screen box-border text-white bg-[#333333] justify-center gap-[15%_15%] whitespace-normal lg:whitespace-nowrap">
-      <div className="flex flex-col justify-between">
+    <div className="flex flex-col lg:flex-row p-8 lg:p-20 h-auto lg:h-screen box-border text-white bg-[#333333] justify-center items-center gap-8 lg:gap-16">
+      {/* 左側のコンテンツ */}
+      <div className="flex flex-col justify-between max-w-lg">
         <div>
           <a
             href="https://www.copitto.com/"
-            className="m-0 font-normal text-[28px] text-white no-underline"
+            className="m-0 font-normal text-2xl text-white no-underline"
           >
             PC←→スマホ
             <br />
@@ -157,7 +170,7 @@ export default function Home() {
             {error && (
               <p className="m-0 text-[#FF5B5B] text-sm">コードが違います。</p>
             )}
-            <div className="flex mt-5 p-[6px_10px] w-auto lg:w-[280px] rounded-lg justify-center">
+            <div className="flex mt-5 p-2 w-full lg:w-72 rounded-lg justify-center">
               <input
                 value={code}
                 maxLength={6}
@@ -172,8 +185,8 @@ export default function Home() {
                   setIsComposing(false);
                   setCode(e.currentTarget.value);
                 }}
-                onChange={(e) => setCode(e.currentTarget.value)}
-                className="w-full h-[45px] text-lg border-none rounded-lg outline-none p-1 text-center text-black"
+                onChange={(e) => setCode(e.target.value)}
+                className="w-full h-12 text-lg border-none rounded-lg outline-none p-1 text-center text-black"
               />
             </div>
           </div>
@@ -182,9 +195,10 @@ export default function Home() {
             <p className="m-0">半角英数字6字</p>
           </div>
         </div>
+
         <div className="flex flex-col gap-3">
           {!hasCodeEntered ? (
-            <h3 className="text-[18px] m-0 pt-5 font-bold">
+            <h3 className="text-lg m-0 pt-5 font-bold">
               手順
               <br />
               ①コピペする内容を下の欄に入力する
@@ -196,17 +210,18 @@ export default function Home() {
             placeholder="コピペ内容を貼り付けてください"
             value={textareaValue}
             onChange={(e) => setTextareaValue(e.target.value)}
-            className="text-black text-[13px] resize-none p-[4px_12px] rounded-lg outline-none h-[52px] overflow-y-auto border-2 border-white focus:border-[#D65C5C] placeholder:text-[rgb(118,118,118)]"
+            ref={textareaRef}
+            className="text-black text-sm resize-none p-3 rounded-lg outline-none min-h-[52px] max-h-[104px] overflow-hidden border-2 border-white focus:border-[#D65C5C] placeholder:text-gray-500"
           />
 
           <div className="flex items-center gap-2.5 justify-end flex-col lg:flex-row">
             {!hasCodeEntered ? (
               <>
-                <h3 className="m-0 font-bold text-[18px]">②確定ボタンを押す</h3>
+                <h3 className="m-0 font-bold text-lg">②確定ボタンを押す</h3>
                 <button
                   onClick={handleConfirm}
                   disabled={!textareaValue || isLoading}
-                  className={`p-[9px_24px] text-[#ECECEC] text-[13px] rounded-lg font-bold ${
+                  className={`px-6 py-2 text-[#ECECEC] text-sm rounded-lg font-bold ${
                     hasConfirmed
                       ? "bg-[#C0C0C0]"
                       : textareaValue && !isLoading
@@ -220,7 +235,7 @@ export default function Home() {
             ) : (
               <button
                 onClick={handleCopy}
-                className={`p-2.5 text-[#ECECEC] rounded-lg font-bold ${
+                className={`px-6 py-2 text-[#ECECEC] rounded-lg font-bold ${
                   isCopied ? "bg-[#4cd997]" : "bg-[#FF5B5B]"
                 }`}
               >
@@ -239,7 +254,7 @@ export default function Home() {
                   setCode("");
                   setError(false);
                 }}
-                className="p-1.5 text-[#FF5B5B] bg-[#333333] !border-[3px] border-[#FF5B5B] rounded-lg font-bold"
+                className="px-4 py-2 text-[#FF5B5B] bg-[#333333] border-3 border-[#FF5B5B] rounded-lg font-bold"
               >
                 リセット
               </button>
@@ -247,15 +262,27 @@ export default function Home() {
           )}
         </div>
       </div>
-      <div className="flex flex-col items-center justify-between">
-        <h3 className="m-0 font-bold text-[18px] pt-[70px] lg:pt-0">
+
+      {/* 右側のコンテンツ */}
+      <div className="flex flex-col items-center justify-center max-w-lg">
+        <h3 className="m-0 font-bold text-lg pt-5 lg:pt-0">
           ③QRコードをスマートフォンで読み込む
         </h3>
-        <p className="mt-3 text-xs">
-          コピペ内容を貼り付けるとQRコードが表示されます。
-        </p>
+        <div className="flex flex-col items-center text-base">
+          <p className="my-2">または</p>
+          <p className="mb-4">表示されているコードを入力</p>
+          <p
+            className={`text-[#7D7D7D] bg-white flex justify-center items-center h-12 rounded-lg font-bold w-full ${
+              data ? "text-2xl" : "text-xs"
+            } px-4`}
+          >
+            {data
+              ? data.passkey
+              : "コピペ内容を貼り付けるとコードが表示されます"}
+          </p>
+        </div>
         {data ? (
-          <div className="bg-[#f5f5f5] rounded-lg my-5 aspect-[1/1] h-[280px] lg:h-[200px]">
+          <div className="bg-[#f5f5f5] rounded-lg mt-10 mb-5 aspect-square h-56 lg:h-48">
             <QRCodeSVG
               value={`https://www.copitto.com/?id=${data.id}`}
               className="w-full h-full p-6 rounded-lg"
@@ -263,24 +290,13 @@ export default function Home() {
             />
           </div>
         ) : (
-          <div className="bg-white/45 rounded-lg my-5 aspect-[1/1] h-[280px] lg:h-[300px] min-h-[170px]" />
+          <div className="bg-white text-[#7D7D7D] text-xs font-bold flex flex-col justify-center items-center rounded-lg mt-10 mb-5 aspect-square h-56 lg:h-72 min-h-[170px]">
+            コピペ内容を貼り付けると
+            <br />
+            QRコードが表示されます
+          </div>
         )}
-        <div className="flex flex-col items-center text-[16px]">
-          <p className="m-0">スマートフォンでスキャン</p>
-          <p className="my-4">または</p>
-          <p className="mt-2 whitespace-nowrap">表示されているコードを入力</p>
-        </div>
-        <div className="flex flex-col items-center">
-          <p className="my-8 whitespace-nowrap">次のコードを入力してください</p>
-          <p
-            className={`text-[#7D7D7D] bg-white justify-center items-center h-[51px] flex rounded-lg font-bold w-full ${
-              data ? "text-2xl" : "text-xs"
-            } px-4`}
-          >
-            {data ? data.passkey : "コピペ内容を貼り付けると表示されます"}
-          </p>
-        </div>
-        <p className="mt-4">※有効期限は15分です</p>
+        <p>※有効期限は15分です</p>
       </div>
     </div>
   );
