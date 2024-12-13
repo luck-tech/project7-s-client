@@ -3,7 +3,7 @@ import { get } from "@vercel/edge-config";
 
 export async function middleware(req: NextRequest) {
   // Check Edge Config to see if the maintenance page should be shown
-  const isInMaintenanceMode = await get("isInMaintenanceMode");
+  const isInMaintenanceMode = await get("isMaintenance");
 
   // If in maintenance mode, point the url pathname to the maintenance page
   if (isInMaintenanceMode) {
