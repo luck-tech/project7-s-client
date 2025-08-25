@@ -55,7 +55,7 @@ export default function Home() {
     setIsLoading(true);
     try {
       const response = await axios.post(
-        "https://katsushika-project.net/memos/create/",
+        "https://api.copitto.com/memos/create/",
         { memo: textareaValue },
         { headers: { "Content-Type": "application/json" } }
       );
@@ -79,7 +79,7 @@ export default function Home() {
     setIsLoading(true);
     try {
       const response = await axios.post(
-        "https://katsushika-project.net/memos/",
+        "https://api.copitto.com/memos/",
         { passkey: code },
         { headers: { "Content-Type": "application/json" } }
       );
@@ -108,7 +108,7 @@ export default function Home() {
     setIsLoading(true);
     try {
       const response = await axios.get(
-        `https://katsushika-project.net/memos/${query}`
+        `https://api.copitto.com/memos/${query}`
       );
       if (response.status === 200) {
         const responseData = response.data;
